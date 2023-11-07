@@ -1,0 +1,6 @@
+/msfontextract
+/msfontextract.exe
+
+*.ttf
+*.iso
+*.ttc
