@@ -58,7 +58,6 @@ func run(ctx context.Context, appName, appVersion string, cliargs []string) erro
 			return nil
 		},
 	}
-	// c.Flags().Var(NewColor(&diffColor), "diff-color", "diff color")
 	c.Flags().StringVar(&dest, "dest", "~/.fonts/msfonts", "destination directory")
 	c.Flags().BoolVar(&refresh, "refresh", true, "refresh")
 	c.Flags().StringVar(&edition, "edition", "^Windows [0-9]+ Pro$", "windows edition")
