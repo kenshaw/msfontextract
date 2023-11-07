@@ -40,7 +40,7 @@ func run(ctx context.Context, appName, appVersion string, cliargs []string) erro
 	var refresh bool
 	var edition string
 	c := &cobra.Command{
-		Use:     appName + " ",
+		Use:     appName + " [flags] <windows iso>",
 		Short:   appName + ", the Microsoft Windows ISO font extraction tool",
 		Version: appVersion,
 		Args:    cobra.ExactArgs(1),

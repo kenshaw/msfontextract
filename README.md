@@ -11,7 +11,7 @@ $ msfontextract --help
 msfontextract, the Microsoft Windows ISO font extraction tool
 
 Usage:
-  msfontextract  [flags]
+  msfontextract [flags] <windows iso>
 
 Flags:
       --dest string      destination directory (default "~/.fonts/msfonts")
