@@ -39,17 +39,22 @@ func run(ctx context.Context, appName, appVersion string, cliargs []string) erro
 	var dest string
 	var refresh bool
 	var edition string
+	var restr string
 	c := &cobra.Command{
 		Use:     appName + " [flags] <windows iso>",
 		Short:   appName + ", the Microsoft Windows ISO font extraction tool",
 		Version: appVersion,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			re, err := regexp.Compile(restr)
+			if err != nil {
+				return fmt.Errorf("unable to compile %q: %v", restr, err)
+			}
 			dest := expand(u.HomeDir, dest)
 			if err := os.MkdirAll(dest, 0o755); err != nil {
 				return err
 			}
-			if err := extract(dest, args[0], edition); err != nil {
+			if err := extract(dest, args[0], edition, re); err != nil {
 				return err
 			}
 			if refresh {
@@ -61,6 +66,7 @@ func run(ctx context.Context, appName, appVersion string, cliargs []string) erro
 	c.Flags().StringVar(&dest, "dest", "~/.fonts/msfonts", "destination directory")
 	c.Flags().BoolVar(&refresh, "refresh", true, "refresh")
 	c.Flags().StringVar(&edition, "edition", "^Windows [0-9]+ Pro$", "windows edition")
+	c.Flags().StringVar(&restr, "regexp", `(?i)^windows/fonts/[^\.]+\.tt[fc]$`, "extract regexp")
 	c.SetVersionTemplate("{{ .Name }} {{ .Version }}\n")
 	c.InitDefaultHelpCmd()
 	c.SetArgs(cliargs[1:])
@@ -70,7 +76,7 @@ func run(ctx context.Context, appName, appVersion string, cliargs []string) erro
 
 // extract extracts the matching ttfs to the out directory for the specified
 // windows edition regexp.
-func extract(out, name, edition string) error {
+func extract(out, name, edition string, re *regexp.Regexp) error {
 	editionRE, err := regexp.Compile(edition)
 	if err != nil {
 		return err
@@ -119,24 +125,24 @@ func extract(out, name, edition string) error {
 	if err != nil {
 		return err
 	}
-	return walk(out, "", root)
+	return walk(out, "", root, re)
 }
 
-// walk walks the directory recursively, extracting
-func walk(out string, name string, f *wim.File) error {
+// walk walks the directory recursively, extracting files matching the regexp.
+func walk(out string, name string, f *wim.File, re *regexp.Regexp) error {
 	if f.IsDir() {
 		files, err := f.Readdir()
 		if err != nil {
 			return err
 		}
 		for _, fi := range files {
-			if err := walk(out, path.Join(name, fi.Name), fi); err != nil {
+			if err := walk(out, path.Join(name, fi.Name), fi, re); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
-	if strings.ToLower(path.Dir(name)) == "windows/fonts" && ttfRE.MatchString(f.Name) {
+	if re.MatchString(name) {
 		r, err := f.Open()
 		if err != nil {
 			return err
@@ -160,8 +166,6 @@ func walk(out string, name string, f *wim.File) error {
 	}
 	return nil
 }
-
-var ttfRE = regexp.MustCompile(`(?i)\.(ttf|ttc)$`)
 
 // expand expands the beginning tilde (~) in a file name to the provided home
 // directory.
