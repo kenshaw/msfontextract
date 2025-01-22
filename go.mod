@@ -5,11 +5,7 @@ go 1.23
 require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/mogaika/udf v0.0.0-20171019171931-167f0ab01c73
-	github.com/spf13/cobra v1.8.1
+	github.com/xo/ox v0.0.0-20250115234929-1f506d1efb13
 )
 
-require (
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/text v0.19.0 // indirect
-)
+require golang.org/x/text v0.21.0 // indirect

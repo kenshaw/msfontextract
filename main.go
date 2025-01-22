@@ -16,7 +16,7 @@ import (
 
 	"github.com/Microsoft/go-winio/wim"
 	"github.com/mogaika/udf"
-	"github.com/spf13/cobra"
+	"github.com/xo/ox"
 )
 
 var (
@@ -25,62 +25,45 @@ var (
 )
 
 func main() {
-	if err := run(context.Background(), name, version, os.Args); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-}
-
-func run(ctx context.Context, appName, appVersion string, cliargs []string) error {
-	u, err := user.Current()
-	if err != nil {
-		return err
-	}
-	var dest string
-	var refresh bool
-	var edition string
-	var restr string
-	c := &cobra.Command{
-		Use:     appName + " [flags] <windows iso>",
-		Short:   appName + ", the Microsoft Windows ISO font extraction tool",
-		Version: appVersion,
-		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			re, err := regexp.Compile(restr)
+	ox.DefaultVersionString = version
+	var args Args
+	ox.RunContext(
+		context.Background(),
+		ox.Usage(name, "a Microsoft Windows ISO font extraction tool"),
+		ox.From(&args),
+		ox.Defaults(),
+		ox.Spec("[flags] <windows iso>"),
+		ox.ValidArgs(1, 1),
+		ox.Exec(func(ctx context.Context, cliargs []string) error {
+			u, err := user.Current()
 			if err != nil {
-				return fmt.Errorf("unable to compile %q: %v", restr, err)
+				return err
 			}
-			dest := expand(u.HomeDir, dest)
+			dest := expand(u.HomeDir, args.Dest)
 			if err := os.MkdirAll(dest, 0o755); err != nil {
 				return err
 			}
-			if err := extract(dest, args[0], edition, re); err != nil {
+			if err := extract(dest, cliargs[0], args.Edition, args.Extract); err != nil {
 				return err
 			}
-			if refresh {
+			if args.Refresh {
 				return exec.Command("fc-cache").Run()
 			}
 			return nil
-		},
-	}
-	c.Flags().StringVar(&dest, "dest", "~/.fonts/msfonts", "destination directory")
-	c.Flags().BoolVar(&refresh, "refresh", true, "refresh")
-	c.Flags().StringVar(&edition, "edition", "^Windows [0-9]+ Pro$", "windows edition")
-	c.Flags().StringVar(&restr, "regexp", `(?i)^windows/fonts/[^\.]+\.tt[fc]$`, "extract regexp")
-	c.SetVersionTemplate("{{ .Name }} {{ .Version }}\n")
-	c.InitDefaultHelpCmd()
-	c.SetArgs(cliargs[1:])
-	c.SilenceErrors, c.SilenceUsage = true, false
-	return c.ExecuteContext(ctx)
+		}),
+	)
+}
+
+type Args struct {
+	Edition *regexp.Regexp `ox:"windows edition,default:^Windows [0-9]+ Pro$"`
+	Extract *regexp.Regexp `ox:"extract files,default:(?i)^windows/fonts/[^\\\\.]+\\\\.tt[fc]$"`
+	Dest    string         `ox:"destination directory,default:~/.fonts/msfonts"`
+	Refresh bool           `ox:"refresh fonts"`
 }
 
 // extract extracts the matching ttfs to the out directory for the specified
 // windows edition regexp.
-func extract(out, name, edition string, re *regexp.Regexp) error {
-	editionRE, err := regexp.Compile(edition)
-	if err != nil {
-		return err
-	}
+func extract(out, name string, edition, extract *regexp.Regexp) error {
 	f, err := os.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -113,7 +96,7 @@ func extract(out, name, edition string, re *regexp.Regexp) error {
 	defer r.Close()
 	var image *wim.Image
 	for _, i := range r.Image {
-		if editionRE.MatchString(i.Name) {
+		if edition.MatchString(i.Name) {
 			image = i
 			break
 		}
@@ -125,7 +108,7 @@ func extract(out, name, edition string, re *regexp.Regexp) error {
 	if err != nil {
 		return err
 	}
-	return walk(out, "", root, re)
+	return walk(out, "", root, extract)
 }
 
 // walk walks the directory recursively, extracting files matching the regexp.
