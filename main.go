@@ -29,7 +29,7 @@ func main() {
 	var args Args
 	ox.RunContext(
 		context.Background(),
-		ox.Usage(name, "a Microsoft Windows ISO font extraction tool"),
+		ox.Usage(name, "a font extraction tool for Microsoft Windows ISOs"),
 		ox.From(&args),
 		ox.Defaults(),
 		ox.Spec("[flags] <windows iso>"),
