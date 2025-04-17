@@ -2,7 +2,7 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/mogaika/udf v0.0.0-20171019171931-167f0ab01c73 h1:HpHNB68mF30LkUorpr7B22Xy0XwParP/n+AL0z4VlFc=
 github.com/mogaika/udf v0.0.0-20171019171931-167f0ab01c73/go.mod h1:OVErfG87tRGCHZpQGO8pL4vDZuY0qr4blPOTR0go6e8=
-github.com/xo/ox v0.0.0-20250115234929-1f506d1efb13 h1:Ud6FTxUHNvCyNTG0asbYLLspAd7A9ILp8YAVxe9YjNw=
-github.com/xo/ox v0.0.0-20250115234929-1f506d1efb13/go.mod h1:8Ck3ncQRkiKpTPAunnLxHr7oQ7I6ybavG2uEN0qESGk=
-golang.org/x/text v0.21.0 h1:zyQAAkrwaneQ066sspRyJaG9VNi/YJ1NfzcGB3hZ/qo=
-golang.org/x/text v0.21.0/go.mod h1:4IBbMaMmOPCJ8SecivzSH54+73PCFmPWxNTLm+vZkEQ=
+github.com/xo/ox v0.0.0-20250130034615-44e38f949f5c h1:Z9wImRKJ+R7sMR51wEFHvTYXl7tjtpsRi2VDwCSX3Bg=
+github.com/xo/ox v0.0.0-20250130034615-44e38f949f5c/go.mod h1:pwpZ1qT1CjQI+tV5S3pcJaDrdyiCpupYkaYeSr0bp5A=
+golang.org/x/text v0.24.0 h1:dd5Bzh4yt5KYA8f9CJHCP4FB4D51c2c6JvN37xJJkJ0=
+golang.org/x/text v0.24.0/go.mod h1:L8rBsPeo2pSS+xqN0d5u2ikmjtmoJbDBT1b7nHvFCdU=
