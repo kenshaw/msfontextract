@@ -25,13 +25,13 @@ var (
 )
 
 func main() {
-	ox.DefaultVersionString = version
 	var args Args
 	ox.RunContext(
 		context.Background(),
 		ox.Usage(name, "a font extraction tool for Microsoft Windows ISOs"),
 		ox.From(&args),
 		ox.Defaults(),
+		ox.VersionString(version),
 		ox.Spec("[flags] <windows iso>"),
 		ox.ValidArgs(1, 1),
 		ox.Exec(func(ctx context.Context, cliargs []string) error {
