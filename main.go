@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/Microsoft/go-winio/wim"
-	"github.com/mogaika/udf"
 	"github.com/xo/ox"
+	"golift.io/udf"
 )
 
 var (
@@ -40,13 +40,15 @@ func main() {
 				return err
 			}
 			dest := expand(u.HomeDir, args.Dest)
-			if err := os.MkdirAll(dest, 0o755); err != nil {
+			if !args.DryRun {
+				if err := os.MkdirAll(dest, 0o755); err != nil {
+					return err
+				}
+			}
+			if err := extract(dest, cliargs[0], args.Edition, args.Extract, args.DryRun); err != nil {
 				return err
 			}
-			if err := extract(dest, cliargs[0], args.Edition, args.Extract); err != nil {
-				return err
-			}
-			if args.Refresh {
+			if args.Refresh && !args.DryRun {
 				return exec.Command("fc-cache").Run()
 			}
 			return nil
@@ -59,30 +61,47 @@ type Args struct {
 	Extract *regexp.Regexp `ox:"extract files,default:(?i)^windows/fonts/[^\\\\.]+\\\\.tt[fc]$"`
 	Dest    string         `ox:"destination directory,default:~/.fonts/msfonts"`
 	Refresh bool           `ox:"refresh fonts"`
+	DryRun  bool           `ox:"show what would be extracted without extracting,short:n"`
 }
 
 // extract extracts the matching ttfs to the out directory for the specified
-// windows edition regexp.
-func extract(out, name string, edition, extract *regexp.Regexp) error {
+// windows edition regexp, printing the available editions and each extracted
+// file. When dryRun is true, no files are written.
+func extract(out, name string, edition, extract *regexp.Regexp, dryRun bool) error {
 	f, err := os.OpenFile(name, os.O_RDONLY, 0)
 	if err != nil {
 		return err
 	}
-	u := udf.NewUdfFromReader(f)
+	u, err := udf.NewUdfFromReader(f)
+	if err != nil {
+		return err
+	}
+	rootFiles, err := u.ReadDir(nil)
+	if err != nil {
+		return err
+	}
 	var sourcesFE *udf.FileEntry
-	for _, f := range u.ReadDir(nil) {
+	for _, f := range rootFiles {
 		if strings.ToLower(f.Name()) == "sources" {
-			sourcesFE = f.FileEntry()
+			if sourcesFE, err = f.FileEntry(); err != nil {
+				return err
+			}
 			break
 		}
 	}
 	if sourcesFE == nil {
 		return errors.New("unable to find sources directory")
 	}
+	sourcesFiles, err := u.ReadDir(sourcesFE)
+	if err != nil {
+		return err
+	}
 	var installWimReader io.ReaderAt
-	for _, f := range u.ReadDir(sourcesFE) {
+	for _, f := range sourcesFiles {
 		if strings.ToLower(f.Name()) == "install.wim" {
-			installWimReader = f.NewReader()
+			if installWimReader, err = f.NewReader(); err != nil {
+				return err
+			}
 			break
 		}
 	}
@@ -95,11 +114,13 @@ func extract(out, name string, edition, extract *regexp.Regexp) error {
 	}
 	defer r.Close()
 	var image *wim.Image
+	fmt.Println("editions:")
 	for _, i := range r.Image {
-		if edition.MatchString(i.Name) {
-			image = i
-			break
+		marker := " "
+		if image == nil && edition.MatchString(i.Name) {
+			image, marker = i, "*"
 		}
+		fmt.Printf("  %s %2d: %s\n", marker, i.Index, i.Name)
 	}
 	if image == nil {
 		return fmt.Errorf("unable to find windows edition %q", edition)
@@ -108,29 +129,34 @@ func extract(out, name string, edition, extract *regexp.Regexp) error {
 	if err != nil {
 		return err
 	}
-	return walk(out, "", root, extract)
+	return walk(out, "", root, extract, dryRun)
 }
 
 // walk walks the directory recursively, extracting files matching the regexp.
-func walk(out string, name string, f *wim.File, re *regexp.Regexp) error {
+func walk(out string, name string, f *wim.File, re *regexp.Regexp, dryRun bool) error {
 	if f.IsDir() {
 		files, err := f.Readdir()
 		if err != nil {
 			return err
 		}
 		for _, fi := range files {
-			if err := walk(out, path.Join(name, fi.Name), fi, re); err != nil {
+			if err := walk(out, path.Join(name, fi.Name), fi, re, dryRun); err != nil {
 				return err
 			}
 		}
 		return nil
 	}
 	if re.MatchString(name) {
+		dest := filepath.Join(out, f.Name)
+		fmt.Printf("%s -> %s\n", name, dest)
+		if dryRun {
+			return nil
+		}
 		r, err := f.Open()
 		if err != nil {
 			return err
 		}
-		w, err := os.OpenFile(filepath.Join(out, f.Name), os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_APPEND, 0o644)
+		w, err := os.OpenFile(dest, os.O_CREATE|os.O_TRUNC|os.O_WRONLY|os.O_APPEND, 0o644)
 		if err != nil {
 			return err
 		}
